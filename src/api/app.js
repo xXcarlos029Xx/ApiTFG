@@ -1,7 +1,7 @@
 import express from 'express';
 import morgan from 'morgan';
 import ruta from './routes/rutas.js';
-import cors from 'cors'
+import cors from 'cors';
 
 const app = express(); // Crear la instancia de express aquí
 app.use(cors());

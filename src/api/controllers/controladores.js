@@ -1,4 +1,6 @@
 import user from "../models/usuarios.js";
+import estadistica from "../models/estadisticas.js";
+import historial from "../models/historial.js";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 
@@ -10,7 +12,10 @@ export const register = async (req, res) => {
   try {
     const hashedPassword = await bcrypt.hash(password, saltRounds);
     const nuevoUser = new user({ username, email, password: hashedPassword });
-    await nuevoUser.save();
+    const savedUser = await nuevoUser.save();
+
+    const nuevaEstadistica = new estadistica({ userId: savedUser._id });
+    await nuevaEstadistica.save();
 
     res.json({ message: "Usuario creado", username, email });
   } catch (error) {
@@ -28,55 +33,68 @@ export const login = async (req, res) => {
     const isMatch = await bcrypt.compare(password, userFound.password);
     if (!isMatch) return res.status(401).json({ message: "Contraseña incorrecta" });
 
-    const token = jwt.sign({ id: userFound._id, username: userFound.username }, "clave_secreta", { expiresIn: "2h" });
-
-    res.json({ message: "Login exitoso", token, username });
+    const token = jwt.sign({ id: userFound._id, username: userFound.username }, process.env.JWT_SECRET, { expiresIn: "1d" });
+    res.json({ token, username: userFound.username });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
 
-export const postMatchResult = async (req, res) => {
-  const { result, duration, role } = req.body;
-  const username = req.user.username;
+export const actualizarEstadisticas = async (req, res) => {
+  const { userId, resultado, duracion, rol } = req.body;
 
   try {
-    const userDoc = await user.findOne({ username });
-    if (!userDoc) return res.status(404).json({ message: "Usuario no encontrado" });
+    const estad = await estadistica.findOne({ userId });
+    if (!estad) return res.status(404).json({ message: "Estadísticas no encontradas" });
 
-    // Actualizar stats
-    userDoc.stats.gamesPlayed++;
-    userDoc.stats.timePlayed += duration;
-    userDoc.stats.roles[role]++;
+    estad.gamesPlayed += 1;
+    if (resultado === "victoria") estad.wins += 1;
+    else estad.losses += 1;
+    estad.timePlayed += duracion;
+    estad.roles[rol] += 1;
 
-    if (result === "win") userDoc.stats.wins++;
-    else userDoc.stats.losses++;
+    await estad.save();
 
-    userDoc.stats.history.push({ result, duration, role });
-    await userDoc.save();
+    const nuevaEntrada = new historial({
+      userId,
+      result: resultado,
+      duration: duracion,
+      role: rol
+    });
 
-    res.json({ message: "Resultado guardado" });
+    await nuevaEntrada.save();
+
+    res.json({ message: "Estadísticas actualizadas" });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
 
 export const getStats = async (req, res) => {
-  const username = req.params.username;
-  try {
-    const userDoc = await user.findOne({ username });
-    if (!userDoc) return res.status(404).json({ message: "Usuario no encontrado" });
+  const { username } = req.params;
 
-    res.json({ username, stats: userDoc.stats });
+  try {
+    const userFound = await user.findOne({ username });
+    if (!userFound) return res.status(404).json({ message: "Usuario no encontrado" });
+
+    const stats = await estadistica.findOne({ userId: userFound._id });
+    if (!stats) return res.status(404).json({ message: "Estadísticas no encontradas" });
+
+    res.json(stats);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
 
-export const getLeaderboard = async (req, res) => {
+export const getHistorial = async (req, res) => {
+  const { username } = req.params;
+
   try {
-    const topUsers = await user.find().sort({ "stats.wins": -1 }).limit(10).select("username stats.wins stats.gamesPlayed");
-    res.json(topUsers);
+    const userFound = await user.findOne({ username });
+    if (!userFound) return res.status(404).json({ message: "Usuario no encontrado" });
+
+    const historialList = await historial.find({ userId: userFound._id }).sort({ date: -1 });
+    res.json(historialList);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { register, login, postMatchResult, getStats, getLeaderboard } from '../controllers/controladores.js';
+import { register, login, actualizarEstadisticas, getStats, getHistorial } from '../controllers/controladores.js';
 import { verifyToken } from '../middleware/auth.js';
 
 const ruta = Router();
@@ -7,8 +7,8 @@ const ruta = Router();
 ruta.post('/register', register);
 ruta.post('/login', login);
 
-ruta.post('/match/result', verifyToken, postMatchResult);
+ruta.post('/match/result', verifyToken, actualizarEstadisticas);
 ruta.get('/stats/:username', getStats);
-ruta.get('/leaderboard', getLeaderboard);
+ruta.get('/historial/:username', getHistorial);
 
 export default ruta;

@@ -24,42 +24,43 @@ export const register = async (req, res) => {
 };
 
 export const login = async (req, res) => {
-  const { username, password } = req.body;
+  const { email, password } = req.body;
 
   try {
-    const userFound = await user.findOne({ username });
-    if (!userFound) return res.status(404).json({ message: "Usuario no encontrado" });
+    const usuario = await user.findOne({ email });
+    if (!usuario) return res.status(404).json({ message: "Usuario no encontrado" });
 
-    const isMatch = await bcrypt.compare(password, userFound.password);
-    if (!isMatch) return res.status(401).json({ message: "Contraseña incorrecta" });
+    const passwordCorrecta = await bcrypt.compare(password, usuario.password);
+    if (!passwordCorrecta) return res.status(401).json({ message: "Contraseña incorrecta" });
 
-    const token = jwt.sign({ id: userFound._id, username: userFound.username }, process.env.JWT_SECRET, { expiresIn: "1d" });
-    res.json({ token, username: userFound.username });
+    const token = jwt.sign({ id: usuario._id }, process.env.JWT_SECRET, { expiresIn: "2h" });
+    res.json({ token, username: usuario.username });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
 
 export const actualizarEstadisticas = async (req, res) => {
-  const { userId, resultado, duracion, rol } = req.body;
+  const userId = req.user.id;
+  const { result, duration, role } = req.body;
 
   try {
     const estad = await estadistica.findOne({ userId });
     if (!estad) return res.status(404).json({ message: "Estadísticas no encontradas" });
 
     estad.gamesPlayed += 1;
-    if (resultado === "victoria") estad.wins += 1;
+    if (result === "victoria") estad.wins += 1;
     else estad.losses += 1;
-    estad.timePlayed += duracion;
-    estad.roles[rol] += 1;
+    estad.timePlayed += duration;
+    estad.roles[role] += 1;
 
     await estad.save();
 
     const nuevaEntrada = new historial({
       userId,
-      result: resultado,
-      duration: duracion,
-      role: rol
+      result,
+      duration,
+      role
     });
 
     await nuevaEntrada.save();
@@ -71,13 +72,11 @@ export const actualizarEstadisticas = async (req, res) => {
 };
 
 export const getStats = async (req, res) => {
-  const { username } = req.params;
-
   try {
-    const userFound = await user.findOne({ username });
-    if (!userFound) return res.status(404).json({ message: "Usuario no encontrado" });
+    const user = await user.findOne({ username: req.params.username });
+    if (!user) return res.status(404).json({ message: "Usuario no encontrado" });
 
-    const stats = await estadistica.findOne({ userId: userFound._id });
+    const stats = await estadistica.findOne({ userId: user._id });
     if (!stats) return res.status(404).json({ message: "Estadísticas no encontradas" });
 
     res.json(stats);
@@ -87,14 +86,12 @@ export const getStats = async (req, res) => {
 };
 
 export const getHistorial = async (req, res) => {
-  const { username } = req.params;
-
   try {
-    const userFound = await user.findOne({ username });
-    if (!userFound) return res.status(404).json({ message: "Usuario no encontrado" });
+    const user = await user.findOne({ username: req.params.username });
+    if (!user) return res.status(404).json({ message: "Usuario no encontrado" });
 
-    const historialList = await historial.find({ userId: userFound._id }).sort({ date: -1 });
-    res.json(historialList);
+    const history = await historial.find({ userId: user._id }).sort({ date: -1 });
+    res.json(history);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

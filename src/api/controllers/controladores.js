@@ -52,7 +52,7 @@ export const actualizarEstadisticas = async (req, res) => {
     if (!estad) return res.status(404).json({ message: "Estadísticas no encontradas" });
 
     estad.gamesPlayed += 1;
-    if (result === "victoria") estad.wins += 1;
+    if (result === "win") estad.wins += 1;
     else estad.losses += 1;
     estad.timePlayed += duration;
     estad.roles[role] += 1;

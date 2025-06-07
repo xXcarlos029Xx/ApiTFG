@@ -76,10 +76,10 @@ export const actualizarEstadisticas = async (req, res) => {
 
 export const getStats = async (req, res) => {
   try {
-    const user = await user.findOne({ username: req.params.username });
-    if (!user) return res.status(404).json({ message: "Usuario no encontrado" });
+    const userIn = await user.findOne({ username: req.params.username });
+    if (!userIn) return res.status(404).json({ message: "Usuario no encontrado" });
 
-    const stats = await estadistica.findOne({ userId: user._id });
+    const stats = await estadistica.findOne({ userId: userIn._id });
     if (!stats) return res.status(404).json({ message: "Estadísticas no encontradas" });
 
     res.json(stats);
@@ -90,10 +90,10 @@ export const getStats = async (req, res) => {
 
 export const getHistorial = async (req, res) => {
   try {
-    const user = await user.findOne({ username: req.params.username });
-    if (!user) return res.status(404).json({ message: "Usuario no encontrado" });
+    const userIn = await user.findOne({ username: req.params.username });
+    if (!userIn) return res.status(404).json({ message: "Usuario no encontrado" });
 
-    const history = await historial.find({ userId: user._id }).sort({ date: -1 });
+    const history = await historial.find({ userId: userIn._id }).sort({ date: -1 });
     res.json(history);
   } catch (error) {
     res.status(500).json({ message: error.message });
